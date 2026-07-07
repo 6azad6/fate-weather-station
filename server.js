@@ -41,18 +41,8 @@ const ODDS_API_DAILY_LIMIT = Number(process.env.ODDS_API_DAILY_LIMIT || 8);
 const ODDS_API_MONTHLY_LIMIT = Number(process.env.ODDS_API_MONTHLY_LIMIT || 450);
 const MATCH_TIMEZONE = process.env.MATCH_TIMEZONE || "Asia/Shanghai";
 const REQUIRE_REAL_MATCHES = String(process.env.REQUIRE_REAL_MATCHES || "false").toLowerCase() === "true";
-const DEFAULT_ODDS_API_SPORTS = [
-  "soccer_fifa_world_cup",
-  "soccer_epl",
-  "soccer_uefa_champs_league",
-  "soccer_spain_la_liga",
-  "soccer_germany_bundesliga",
-  "soccer_italy_serie_a",
-  "soccer_france_ligue_one",
-  "soccer_uefa_europa_league",
-  "soccer_fifa_club_world_cup",
-];
-const ODDS_API_MAX_SPORTS_PER_REFRESH = Number(process.env.ODDS_API_MAX_SPORTS_PER_REFRESH || 4);
+const DEFAULT_ODDS_API_SPORTS = ["soccer_fifa_world_cup"];
+const ODDS_API_MAX_SPORTS_PER_REFRESH = Number(process.env.ODDS_API_MAX_SPORTS_PER_REFRESH || 1);
 const ODDS_API_SPORTS = (process.env.ODDS_API_SPORTS || DEFAULT_ODDS_API_SPORTS.join(","))
   .split(",")
   .map((item) => item.trim())
@@ -100,11 +90,15 @@ const halfDefaults = [
   ["负胜", 26], ["负平", 13], ["负负", 6.4],
 ].map(([label, odds]) => ({ value: label, label, odds }));
 
-function dateKey(date = new Date()) {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
+function dateKey(date = new Date(), timeZone = MATCH_TIMEZONE) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const get = (type) => parts.find((part) => part.type === type)?.value || "";
+  return `${get("year")}-${get("month")}-${get("day")}`;
 }
 
 function seededRandom(seedText) {
@@ -415,6 +409,7 @@ function mapFootballDataMatch(match, index = 0) {
     realMatchId: match.id,
     code: `${z.weekday}${String(index + 1).padStart(3, "0")}`,
     league: match.competition?.name || match.area?.name || "真实赛程",
+    competitionCode: match.competition?.code || "",
     time: `${z.month}-${z.day} ${z.hour}:${z.minute}`,
     home: match.homeTeam?.shortName || match.homeTeam?.name || "主队",
     away: match.awayTeam?.shortName || match.awayTeam?.name || "客队",
@@ -455,6 +450,7 @@ function mapOddsApiEvent(event, index = 0) {
     oddsEventId: event.id,
     code: `${z.weekday}${String(index + 1).padStart(3, "0")}`,
     league: event.sport_title || event.sport_key || "赔率赛程",
+    sportKey: event.sport_key || "",
     time: `${z.month}-${z.day} ${z.hour}:${z.minute}`,
     home: event.home_team || "主队",
     away: event.away_team || "客队",
@@ -534,9 +530,9 @@ async function fetchOddsMatchesFromApi() {
 const defaultDb = () => ({
   version: 2,
   matchDate: dateKey(),
-  matchSource: ODDS_API_KEY ? "the-odds-api" : FOOTBALL_DATA_TOKEN ? "football-data.org" : "simulated",
+  matchSource: REQUIRE_REAL_MATCHES ? "no-real-matches" : "simulated",
   oddsUpdatedAt: new Date().toISOString(),
-  matches: generateDailyMatches(),
+  matches: REQUIRE_REAL_MATCHES ? [] : generateDailyMatches(),
   options: {
     score: scoreDefaults,
     goals: goalsDefaults,
@@ -553,7 +549,8 @@ const defaultDb = () => ({
 let db = loadDb();
 normalizeApiUsage();
 normalizeOddsApiUsage();
-maybeDailyScheduleRefresh();
+enforceRealMatchRequirement();
+refreshDailyMatches(false).catch((err) => console.error("启动刷新真实赛程失败：", err));
 const sseClients = new Map();
 
 function loadDb() {
@@ -596,7 +593,7 @@ function publicState(clientId = "") {
     realtime: true,
     serverTime: new Date().toISOString(),
     matchDate: db.matchDate,
-    matchSource: db.matchSource || "simulated",
+    matchSource: deriveMatchSource(),
     apiUsage: {
       date: db.apiUsage?.date,
       used: db.apiUsage?.used || 0,
@@ -629,6 +626,13 @@ function publicState(clientId = "") {
     history: db.history.slice(-15),
     myTickets,
   };
+}
+
+function deriveMatchSource() {
+  if (!Array.isArray(db.matches) || db.matches.length === 0) return db.matchSource || "no-real-matches";
+  if (db.matches.some((match) => match.oddsEventId)) return "the-odds-api";
+  if (db.matches.some((match) => match.realMatchId)) return "football-data.org";
+  return db.matchSource === "no-real-matches" ? "no-real-matches" : "simulated";
 }
 
 function broadcast() {
@@ -706,8 +710,8 @@ async function refreshDailyMatches(force = false) {
   const today = dateKey(now);
   const shouldRefresh = force
     || db.matchDate !== today
-    || (ODDS_API_KEY && db.matchSource !== "the-odds-api" && canUseOddsApi(1))
-    || (!ODDS_API_KEY && FOOTBALL_DATA_TOKEN && db.matchSource === "simulated" && canUseFootballDataApi());
+    || (ODDS_API_KEY && !hasOddsApiMatches() && canUseOddsApi(1))
+    || (FOOTBALL_DATA_TOKEN && !hasFootballDataMatches() && canUseFootballDataApi());
   if (!shouldRefresh) return false;
 
   // 只刷新“可投注赛程”和赔率；历史投注与全站盈亏继续保留。
@@ -746,6 +750,35 @@ function maybeDailyScheduleRefresh() {
   if (now.getHours() >= DAILY_REFRESH_HOUR) {
     refreshDailyMatches(false).catch((err) => console.error("每日赛程刷新失败：", err));
   }
+}
+
+function configuredOddsSportsSet() {
+  return new Set(ODDS_API_SPORTS.slice(0, ODDS_API_MAX_SPORTS_PER_REFRESH));
+}
+
+function hasOddsApiMatches() {
+  if (!Array.isArray(db.matches)) return false;
+  const oddsMatches = db.matches.filter((match) => match.oddsEventId);
+  if (!oddsMatches.length) return false;
+  const configured = configuredOddsSportsSet();
+  if (!configured.size) return true;
+  return oddsMatches.every((match) => match.sportKey && configured.has(match.sportKey));
+}
+
+function hasFootballDataMatches() {
+  if (!Array.isArray(db.matches)) return false;
+  const realMatches = db.matches.filter((match) => match.realMatchId);
+  if (!realMatches.length) return false;
+  if (!FOOTBALL_DATA_COMPETITIONS.length) return true;
+  const configured = new Set(FOOTBALL_DATA_COMPETITIONS);
+  return realMatches.every((match) => match.competitionCode && configured.has(match.competitionCode));
+}
+
+function enforceRealMatchRequirement() {
+  if (!REQUIRE_REAL_MATCHES) return;
+  if (hasOddsApiMatches() || hasFootballDataMatches()) return;
+  db.matches = [];
+  db.matchSource = "no-real-matches";
 }
 
 function optionList(playType, match) {

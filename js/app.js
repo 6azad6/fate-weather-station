@@ -135,7 +135,13 @@ function updateRealtimeLabels(serverState = {}) {
   const sub = $(".lottery-head .sub");
   if (sub) {
     const time = realtime.oddsUpdatedAt ? new Date(realtime.oddsUpdatedAt).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" }) : "本地";
-    const source = serverState.matchSource === "the-odds-api" ? "The Odds API" : serverState.matchSource === "football-data.org" ? "football-data.org" : "模拟";
+    const source = serverState.matchSource === "the-odds-api"
+      ? "The Odds API"
+      : serverState.matchSource === "football-data.org"
+        ? "football-data.org"
+        : serverState.matchSource === "no-real-matches"
+          ? "暂无真实世界杯赛程"
+          : "模拟";
     const quota = serverState.oddsApiUsage ? `，赔率API ${serverState.oddsApiUsage.usedToday}/${serverState.oddsApiUsage.dailyLimit}次/日` : "";
     sub.textContent = realtime.enabled
       ? `微信/公网多人模式：赛程/赔率来源 ${source}（${time}${quota}），投注与开奖汇总到全站气象球。`

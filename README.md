@@ -124,6 +124,6 @@ fate-weather-station/
 - 页面已加入微信/社交平台可读取的标题、描述和缩略图信息。
 - 服务器接口 `/api/state` 返回全站总盈亏，气象球使用该接口数据。
 - 实时更新优先使用 SSE 推送；微信环境不支持时自动降级为 5 秒轮询。
-- 当前可接入 The Odds API 获取真实 bookmaker 赔率；如果未配置 key 或额度不足，会自动回退模拟数据。作品仍为虚拟投注，不涉及真实交易。
-- 如果要求世界杯赛程准确，请在 Render 环境变量中设置 `ODDS_API_SPORTS=soccer_fifa_world_cup` 和 `REQUIRE_REAL_MATCHES=true`，这样不会显示模拟赛程冒充世界杯。
+- 当前可接入 The Odds API 获取真实 bookmaker 赔率。默认只抓 `soccer_fifa_world_cup`，避免其它联赛混入世界杯页面。作品仍为虚拟投注，不涉及真实交易。
+- 如果要求世界杯赛程准确，请在 Render 环境变量中保持 `ODDS_API_SPORTS=soccer_fifa_world_cup` 和 `REQUIRE_REAL_MATCHES=true`；当接口没有返回世界杯比赛时，页面会显示“暂无真实世界杯赛程”，不会显示模拟赛程冒充世界杯。
 - 如果要按真实比分开奖，请同时设置 `FOOTBALL_DATA_TOKEN` 和 `FOOTBALL_DATA_COMPETITIONS=WC`。
