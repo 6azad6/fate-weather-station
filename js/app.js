@@ -135,8 +135,10 @@ function updateRealtimeLabels(serverState = {}) {
   const sub = $(".lottery-head .sub");
   if (sub) {
     const time = realtime.oddsUpdatedAt ? new Date(realtime.oddsUpdatedAt).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" }) : "本地";
+    const source = serverState.matchSource === "the-odds-api" ? "The Odds API" : serverState.matchSource === "football-data.org" ? "football-data.org" : "模拟";
+    const quota = serverState.oddsApiUsage ? `，赔率API ${serverState.oddsApiUsage.usedToday}/${serverState.oddsApiUsage.dailyLimit}次/日` : "";
     sub.textContent = realtime.enabled
-      ? `微信/公网多人模式：赔率实时更新（${time}），投注与开奖汇总到全站气象球。`
+      ? `微信/公网多人模式：赛程/赔率来源 ${source}（${time}${quota}），投注与开奖汇总到全站气象球。`
       : "本地离线演示：选择赔率 → 虚拟投注 → 模拟开奖。部署 server.js 后自动切换多人实时。";
   }
   const small = $("#pendingCount");

@@ -9,3 +9,14 @@
     envVars:
       - key: NODE_ENV
         value: production
+      - key: ODDS_API_DAILY_LIMIT
+        value: "8"
+      - key: ODDS_API_MONTHLY_LIMIT
+        value: "450"
+      - key: ODDS_API_REGIONS
+        value: eu
+      - key: ODDS_API_MARKETS
+        value: h2h
+      # 在 Render 后台手动添加，不要写进 GitHub：
+      # ODDS_API_KEY=你的 The Odds API key
+      # FOOTBALL_DATA_TOKEN=你的 football-data.org token（可选，用于赛果/赛程兜底）
