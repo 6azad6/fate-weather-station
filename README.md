@@ -19,6 +19,8 @@
 - 多人实时后端：所有用户投注、开奖和盈亏统一汇总
 - 每日可投注赛程更新：服务器每天自动刷新一批可投注比赛
 - The Odds API 接入：可用真实 bookmaker 胜平负赔率作为赔率来源
+- football-data.org 接入：用于世界杯赛果、状态和真实比分结算
+- 世界杯优先：默认配置为 `soccer_fifa_world_cup`，并按 `Asia/Shanghai` 显示开赛时间
 - 调用额度保护：服务器集中请求、每日/月度预算、记录官方剩余额度
 - 赔率实时更新：服务器每 45 秒对缓存赔率做小幅波动，前端自动同步，不额外消耗 API 次数
 - 命运气象站：魔法球 SVG、全站实时数据面板、盈亏进度条、公式展示、历史轨迹
@@ -123,3 +125,5 @@ fate-weather-station/
 - 服务器接口 `/api/state` 返回全站总盈亏，气象球使用该接口数据。
 - 实时更新优先使用 SSE 推送；微信环境不支持时自动降级为 5 秒轮询。
 - 当前可接入 The Odds API 获取真实 bookmaker 赔率；如果未配置 key 或额度不足，会自动回退模拟数据。作品仍为虚拟投注，不涉及真实交易。
+- 如果要求世界杯赛程准确，请在 Render 环境变量中设置 `ODDS_API_SPORTS=soccer_fifa_world_cup` 和 `REQUIRE_REAL_MATCHES=true`，这样不会显示模拟赛程冒充世界杯。
+- 如果要按真实比分开奖，请同时设置 `FOOTBALL_DATA_TOKEN` 和 `FOOTBALL_DATA_COMPETITIONS=WC`。

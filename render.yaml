@@ -17,6 +17,18 @@
         value: eu
       - key: ODDS_API_MARKETS
         value: h2h
+      - key: ODDS_API_SPORTS
+        value: soccer_fifa_world_cup
+      - key: ODDS_API_MAX_SPORTS_PER_REFRESH
+        value: "1"
+      - key: REQUIRE_REAL_MATCHES
+        value: "true"
+      - key: MATCH_TIMEZONE
+        value: Asia/Shanghai
       # 在 Render 后台手动添加，不要写进 GitHub：
       # ODDS_API_KEY=你的 The Odds API key
-      # FOOTBALL_DATA_TOKEN=你的 football-data.org token（可选，用于赛果/赛程兜底）
+      # FOOTBALL_DATA_TOKEN=你的 football-data.org token（用于真实赛果/比分）
+      - key: FOOTBALL_DATA_COMPETITIONS
+        value: WC
+      - key: FOOTBALL_DATA_DAILY_LIMIT
+        value: "10"

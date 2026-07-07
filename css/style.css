@@ -75,7 +75,7 @@ button{border:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .settle-panel{margin:12px;background:#fff;border:1px solid #e3e6ef;border-radius:20px;padding:12px;box-shadow:0 12px 26px rgba(23,27,42,.06)}
 .settle-panel h3{font-size:15px;margin:0 0 8px;color:#272b36;display:flex;justify-content:space-between}
 .settle-panel small{color:#8d94a3}
-.settle-actions{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.settle-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(76px,1fr));gap:8px}
 .settle-actions button{min-height:44px;border-radius:14px;background:#f2f4f8;color:#3d4352;font-weight:900;border:1px solid #e3e6ee}
 .settle-actions button:first-child{background:#fff2f2;color:#c92736}
 .settle-actions button:nth-child(2){background:#f4f5f8;color:#49505f}

@@ -275,6 +275,10 @@ function renderPlayTabs() {
 }
 
 function renderMatches() {
+  if (!matches.length) {
+    $("#matchList").innerHTML = `<div class="empty">当前没有从真实接口获取到可投注赛程。请检查 Render 环境变量 ODDS_API_KEY / ODDS_API_SPORTS，或稍后刷新。</div>`;
+    return;
+  }
   $("#matchList").innerHTML = matches.map((match) => {
     const gridClass = state.playType === "score" ? "score-grid" : state.playType === "goals" ? "goals-grid" : state.playType === "half" ? "half-grid" : "odds-row";
     const buttons = optionList(state.playType, match).map((opt) => {
@@ -461,8 +465,8 @@ async function settleTickets(forced = "random") {
       applyServerState(data.state);
       const profit = (data.roundReturn || 0) - (data.roundBet || 0);
       toast(data.settled
-        ? `服务器已开奖 ${data.settled} 张：本轮${profit >= 0 ? "盈利" : "亏损"} ${formatMoney(Math.abs(profit))}。`
-        : "全站当前没有待开奖投注。");
+        ? `${forced === "real" ? "真实赛果" : "模拟"}已结算 ${data.settled} 张：本轮${profit >= 0 ? "盈利" : "亏损"} ${formatMoney(Math.abs(profit))}。`
+        : (forced === "real" ? "暂时没有已完赛且可按真实比分结算的投注。" : "全站当前没有待开奖投注。"));
     } catch (err) {
       toast(err.message || "服务器开奖失败");
     }

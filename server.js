@@ -39,8 +39,21 @@ const ODDS_API_REGIONS = process.env.ODDS_API_REGIONS || "eu";
 const ODDS_API_MARKETS = process.env.ODDS_API_MARKETS || "h2h";
 const ODDS_API_DAILY_LIMIT = Number(process.env.ODDS_API_DAILY_LIMIT || 8);
 const ODDS_API_MONTHLY_LIMIT = Number(process.env.ODDS_API_MONTHLY_LIMIT || 450);
-const ODDS_API_MAX_SPORTS_PER_REFRESH = Number(process.env.ODDS_API_MAX_SPORTS_PER_REFRESH || 3);
-const ODDS_API_SPORTS = (process.env.ODDS_API_SPORTS || "")
+const MATCH_TIMEZONE = process.env.MATCH_TIMEZONE || "Asia/Shanghai";
+const REQUIRE_REAL_MATCHES = String(process.env.REQUIRE_REAL_MATCHES || "false").toLowerCase() === "true";
+const DEFAULT_ODDS_API_SPORTS = [
+  "soccer_fifa_world_cup",
+  "soccer_epl",
+  "soccer_uefa_champs_league",
+  "soccer_spain_la_liga",
+  "soccer_germany_bundesliga",
+  "soccer_italy_serie_a",
+  "soccer_france_ligue_one",
+  "soccer_uefa_europa_league",
+  "soccer_fifa_club_world_cup",
+];
+const ODDS_API_MAX_SPORTS_PER_REFRESH = Number(process.env.ODDS_API_MAX_SPORTS_PER_REFRESH || 4);
+const ODDS_API_SPORTS = (process.env.ODDS_API_SPORTS || DEFAULT_ODDS_API_SPORTS.join(","))
   .split(",")
   .map((item) => item.trim())
   .filter(Boolean);
@@ -111,6 +124,37 @@ function seededRandom(seedText) {
 
 function weekdayCn(date) {
   return ["周日", "周一", "周二", "周三", "周四", "周五", "周六"][date.getDay()];
+}
+
+function zonedDateParts(date, timeZone = MATCH_TIMEZONE) {
+  const parts = new Intl.DateTimeFormat("zh-CN", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    weekday: "short",
+  }).formatToParts(date);
+  const get = (type) => parts.find((part) => part.type === type)?.value || "";
+  const weekdayMap = {
+    周日: "周日",
+    周一: "周一",
+    周二: "周二",
+    周三: "周三",
+    周四: "周四",
+    周五: "周五",
+    周六: "周六",
+  };
+  return {
+    year: get("year"),
+    month: get("month"),
+    day: get("day"),
+    hour: get("hour"),
+    minute: get("minute"),
+    weekday: weekdayMap[get("weekday")] || get("weekday") || weekdayCn(date),
+  };
 }
 
 function generateDailyMatches(baseDate = new Date()) {
@@ -351,10 +395,7 @@ function makeDemoOddsFromRealMatch(match) {
 
 function mapFootballDataMatch(match, index = 0) {
   const utcDate = match.utcDate ? new Date(match.utcDate) : new Date();
-  const mm = String(utcDate.getMonth() + 1).padStart(2, "0");
-  const dd = String(utcDate.getDate()).padStart(2, "0");
-  const hh = String(utcDate.getHours()).padStart(2, "0");
-  const min = String(utcDate.getMinutes()).padStart(2, "0");
+  const z = zonedDateParts(utcDate);
   const score = match.score?.fullTime;
   const half = match.score?.halfTime;
   let realResult = null;
@@ -370,11 +411,11 @@ function mapFootballDataMatch(match, index = 0) {
     };
   }
   return {
-    id: Number(match.id) || Number(`${mm}${dd}${String(index + 1).padStart(2, "0")}`),
+    id: Number(match.id) || Number(`${z.month}${z.day}${String(index + 1).padStart(2, "0")}`),
     realMatchId: match.id,
-    code: `${weekdayCn(utcDate)}${String(index + 1).padStart(3, "0")}`,
+    code: `${z.weekday}${String(index + 1).padStart(3, "0")}`,
     league: match.competition?.name || match.area?.name || "真实赛程",
-    time: `${mm}-${dd} ${hh}:${min}`,
+    time: `${z.month}-${z.day} ${z.hour}:${z.minute}`,
     home: match.homeTeam?.shortName || match.homeTeam?.name || "主队",
     away: match.awayTeam?.shortName || match.awayTeam?.name || "客队",
     status: match.status || "SCHEDULED",
@@ -408,16 +449,13 @@ function extractH2HOdds(event) {
 
 function mapOddsApiEvent(event, index = 0) {
   const date = event.commence_time ? new Date(event.commence_time) : new Date();
-  const mm = String(date.getMonth() + 1).padStart(2, "0");
-  const dd = String(date.getDate()).padStart(2, "0");
-  const hh = String(date.getHours()).padStart(2, "0");
-  const min = String(date.getMinutes()).padStart(2, "0");
+  const z = zonedDateParts(date);
   return {
-    id: Number(String(event.id || "").replace(/\D/g, "").slice(0, 12)) || Number(`${mm}${dd}${String(index + 1).padStart(2, "0")}`),
+    id: Number(String(event.id || "").replace(/\D/g, "").slice(0, 12)) || Number(`${z.month}${z.day}${String(index + 1).padStart(2, "0")}`),
     oddsEventId: event.id,
-    code: `${weekdayCn(date)}${String(index + 1).padStart(3, "0")}`,
+    code: `${z.weekday}${String(index + 1).padStart(3, "0")}`,
     league: event.sport_title || event.sport_key || "赔率赛程",
-    time: `${mm}-${dd} ${hh}:${min}`,
+    time: `${z.month}-${z.day} ${z.hour}:${z.minute}`,
     home: event.home_team || "主队",
     away: event.away_team || "客队",
     status: "SCHEDULED",
@@ -440,6 +478,28 @@ async function discoverSoccerSportsFromOddsApi() {
       .slice(0, ODDS_API_MAX_SPORTS_PER_REFRESH);
   } catch {
     return ["soccer_epl"];
+  }
+}
+
+async function listAvailableOddsSports() {
+  if (!ODDS_API_KEY) return [];
+  const url = new URL(`${ODDS_API_BASE}/sports`);
+  url.searchParams.set("apiKey", ODDS_API_KEY);
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return [];
+    const sports = await res.json();
+    return (Array.isArray(sports) ? sports : [])
+      .filter((sport) => String(sport.key || "").startsWith("soccer_"))
+      .map((sport) => ({
+        key: sport.key,
+        title: sport.title,
+        active: sport.active,
+        group: sport.group,
+        description: sport.description,
+      }));
+  } catch {
+    return [];
   }
 }
 
@@ -659,10 +719,16 @@ async function refreshDailyMatches(force = false) {
     nextMatches = await fetchRealMatchesFromApi();
   }
   db.matchDate = today;
-  db.matches = nextMatches.length ? nextMatches : generateDailyMatches(now);
-  db.matchSource = nextMatches.length
-    ? (nextMatches.some((match) => match.oddsEventId) ? "the-odds-api" : "football-data.org")
-    : "simulated";
+  if (nextMatches.length) {
+    db.matches = nextMatches;
+    db.matchSource = nextMatches.some((match) => match.oddsEventId) ? "the-odds-api" : "football-data.org";
+  } else if (REQUIRE_REAL_MATCHES) {
+    db.matches = [];
+    db.matchSource = "no-real-matches";
+  } else {
+    db.matches = generateDailyMatches(now);
+    db.matchSource = "simulated";
+  }
   db.options = {
     score: scoreDefaults.map((opt) => ({ ...opt, odds: jitterOdd(opt.odds) })),
     goals: goalsDefaults.map((opt) => ({ ...opt, odds: jitterOdd(opt.odds) })),
@@ -1022,6 +1088,17 @@ async function handleApi(req, res, url) {
         broadcast();
       }
       sendJson(res, 200, { ok: true, updated: matches.length, state: publicState() });
+      return;
+    }
+
+    if (url.pathname === "/api/admin/sports" && req.method === "GET") {
+      const sports = await listAvailableOddsSports();
+      sendJson(res, 200, {
+        ok: true,
+        configuredSports: ODDS_API_SPORTS.slice(0, ODDS_API_MAX_SPORTS_PER_REFRESH),
+        sports,
+        note: "The Odds API 的 /sports 接口通常不消耗额度，可用来确认当前有哪些足球赛事分类。",
+      });
       return;
     }
 
