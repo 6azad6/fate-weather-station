@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#ef3340" />
+  <meta name="description" content="命运气象站：基于虚拟体育投注、实时赔率、开奖结果和全站用户总盈亏的数字艺术交互网页。" />
+  <meta name="keywords" content="命运气象站,数字艺术,H5交互,虚拟投注,数据可视化,赔率,气象球" />
+  <meta name="format-detection" content="telephone=no,email=no,address=no" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="命运气象站 Fate Weather Station" />
+  <meta property="og:description" content="进入一套虚拟足球计算器，让所有用户的总盈亏实时驱动一颗命运气象球。" />
+  <meta property="og:image" content="assets/wx-share-thumb.jpg" />
+  <meta property="og:site_name" content="命运气象站" />
+  <meta itemprop="name" content="命运气象站 Fate Weather Station" />
+  <meta itemprop="description" content="赔率表不是天气预报，是命运定价单。" />
+  <meta itemprop="image" content="assets/wx-share-thumb.jpg" />
+  <link rel="image_src" href="assets/wx-share-thumb.jpg" />
+  <title>命运气象站 Fate Weather Station</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <main class="phone-shell">
+    <header class="topbar">
+      <div class="status-row"><span>FATE WEATHER STATION</span><strong>虚拟演示版</strong></div>
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true" title="连续点击3次可重置"></div>
+        <div>
+          <h1>命运气象站</h1>
+          <p>赔率表不是天气预报，是命运定价单。</p>
+        </div>
+      </div>
+      <nav class="tab-switch" aria-label="页面切换">
+        <button class="tab-btn active" data-tab="bet">🎫 投注终端</button>
+        <button class="tab-btn" data-tab="weather">🔮 气象站</button>
+      </nav>
+    </header>
+
+    <section class="page active" id="betPage">
+      <div class="notice"><b>重要说明：</b>本页面为课程作品的虚拟交互原型，所有金额、赔率、开奖均为艺术化模拟，不涉及真实购买、支付或兑奖。</div>
+      <div class="lottery-head">
+        <div class="title"><span>足球计算器</span><span>☰</span></div>
+        <div class="sub">根据参考截图重构的移动端投注界面：选择赔率 → 虚拟投注 → 模拟开奖。</div>
+      </div>
+      <div class="play-tabs" id="playTabs"></div>
+      <div class="toolbar">
+        <button class="mini-btn light" id="demoSelectBtn">一键选两场</button>
+        <button class="mini-btn red" id="autoBtn">自动模拟10轮</button>
+        <button class="mini-btn" id="toWeatherBtn">查看气象球</button>
+      </div>
+      <div class="match-list" id="matchList"></div>
+
+      <div class="settle-panel">
+        <h3>模拟开奖 <small id="pendingCount"></small></h3>
+        <div class="settle-actions">
+          <button data-settle="win">🎯 主胜</button>
+          <button data-settle="draw">⚖️ 平局</button>
+          <button data-settle="loss">❌ 客胜</button>
+          <button data-settle="random">🎲 随机</button>
+        </div>
+      </div>
+
+      <div class="tickets-list" id="ticketsList"></div>
+
+      <aside class="ticket" aria-label="投注单">
+        <div class="ticket-top">
+          <div class="selected-count"><span class="badge" id="selectedBadge">0</span><span>已选</span></div>
+          <select class="pass-select" id="passSelect" aria-label="过关方式"></select>
+          <button class="clear-btn" id="clearBtn">清空</button>
+        </div>
+        <div class="ticket-bottom">
+          <label class="field"><input id="timesInput" type="number" min="1" max="99" value="1" /><span>倍</span></label>
+          <div class="money-info">
+            投注金额：<b id="totalMoney">0</b> 元<br />
+            理论最高奖：<b id="maxPrize">0</b> 元
+          </div>
+          <button class="buy-btn" id="buyBtn" disabled>确认投注</button>
+        </div>
+      </aside>
+    </section>
+
+    <section class="page weather-page" id="weatherPage">
+      <div class="weather-hero">
+        <div class="weather-title">
+          <div>
+            <h2>命运气象站</h2>
+            <p>把所有参与者的真实盈亏，转译为一颗气象球的颜色与风暴强度。</p>
+          </div>
+          <div class="weather-pill" id="weatherPill">未观测</div>
+        </div>
+        <div class="orb-wrap">
+          <svg class="orb-svg" viewBox="0 0 360 330" role="img" aria-label="根据盈亏变化的魔法球">
+            <defs>
+              <radialGradient id="orbGradient" cx="38%" cy="28%" r="68%">
+                <stop id="orbStop1" offset="0%" stop-color="#fff5bd" />
+                <stop id="orbStop2" offset="44%" stop-color="#ffbf49" />
+                <stop id="orbStop3" offset="100%" stop-color="#7b61ff" />
+              </radialGradient>
+              <radialGradient id="baseGradient" cx="50%" cy="20%" r="90%">
+                <stop offset="0%" stop-color="#5d6475" />
+                <stop offset="100%" stop-color="#11141d" />
+              </radialGradient>
+              <filter id="softBlur"><feGaussianBlur stdDeviation="9" /></filter>
+              <filter id="noise">
+                <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="3" seed="8" />
+                <feColorMatrix type="saturate" values="0" />
+                <feComponentTransfer><feFuncA type="table" tableValues="0 0.22" /></feComponentTransfer>
+              </filter>
+            </defs>
+            <ellipse cx="180" cy="286" rx="110" ry="20" fill="#000" opacity=".35" filter="url(#softBlur)" />
+            <circle id="orbGlow" cx="180" cy="142" r="106" fill="none" stroke="#ffbf49" stroke-width="20" opacity=".38" filter="url(#softBlur)" />
+            <circle cx="180" cy="142" r="104" fill="url(#orbGradient)" opacity=".98" />
+            <circle cx="180" cy="142" r="104" filter="url(#noise)" opacity=".55" />
+            <path id="stormPath" d="M124 178 C156 138, 176 204, 209 146 C198 186, 223 187, 189 238 C199 198, 163 205, 124 178Z" fill="#fff" opacity=".05" />
+            <ellipse cx="142" cy="92" rx="42" ry="22" fill="#fff" opacity=".48" transform="rotate(-24 142 92)" />
+            <ellipse cx="204" cy="64" rx="18" ry="8" fill="#fff" opacity=".26" transform="rotate(18 204 64)" />
+            <path d="M106 246 h148 l18 44 H88 Z" fill="url(#baseGradient)" />
+            <ellipse cx="180" cy="246" rx="76" ry="17" fill="#777f92" opacity=".72" />
+            <ellipse cx="180" cy="244" rx="58" ry="10" fill="#151923" opacity=".65" />
+            <text x="180" y="314" text-anchor="middle" fill="rgba(255,255,255,.62)" font-size="13" font-weight="700">FATE WEATHER STATION</text>
+          </svg>
+        </div>
+        <p class="weather-caption" id="weatherCaption">等待第一笔虚拟投注。球体现在处于未观测状态。</p>
+      </div>
+
+      <div class="panel">
+        <h3>实时数据面板 <small>由投注与开奖自动计算</small></h3>
+        <div class="stats-grid">
+          <div class="stat-card"><div class="stat-label">累计投注总额</div><div class="stat-value" id="statBet">¥0</div></div>
+          <div class="stat-card"><div class="stat-label">累计返还总额</div><div class="stat-value" id="statReturn">¥0</div></div>
+          <div class="stat-card"><div class="stat-label">净盈亏</div><div class="stat-value" id="statProfit">¥0</div></div>
+          <div class="stat-card"><div class="stat-label">返还率</div><div class="stat-value" id="statRate">0%</div></div>
+        </div>
+        <div class="progress-box">
+          <div class="zero-line"><span class="profit-marker" id="profitMarker"></span></div>
+          <div class="progress-labels"><span>-¥5000 亏损风暴</span><span>0</span><span>+¥5000 暖色晴天</span></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>透明映射公式 <small>不暗调结果</small></h3>
+        <div class="formula">
+          <span class="bad">净盈亏</span> = Σ(中奖金额) - Σ(投注金额)<br />
+          <span class="cold">返还率</span> = Σ(中奖金额) / Σ(投注金额) × 100%<br />
+          <span class="hl">色相</span> = 45° + (1 - 返还率) × 215°<br />
+          亮度 = 25% + 返还率 × 45%<br />
+          光晕强度 = |净盈亏| / 5000 × 100%
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>历史轨迹 <small>最近15轮开奖</small></h3>
+        <div class="timeline" id="historyList"></div>
+      </div>
+
+      <div class="panel">
+        <h3>实体装置概念图 <small>本次提交为非装置部分</small></h3>
+        <div class="concept-grid">
+          <div class="concept-card"><img src="assets/orb-concept-sun.png" alt="晴色魔法球概念图"><div><h4>琥珀晴天</h4><p>少量样本中返还率偏高时，球体呈暖色高亮，制造短暂的幸运错觉。</p></div></div>
+          <div class="concept-card"><img src="assets/orb-concept-cloud.png" alt="阴色魔法球概念图"><div><h4>铅灰阴霾</h4><p>样本增加后返还率回落，颜色向灰蓝过渡，显示概率的冷却。</p></div></div>
+          <div class="concept-card"><img src="assets/orb-concept-storm.png" alt="风暴魔法球概念图"><div><h4>紫电风暴</h4><p>长期净亏损扩大时，光晕和闪电增强，呈现赔率结构的宿命感。</p></div></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="toast" id="toast"></div>
+  <div class="modal-mask" id="resetModal" role="dialog" aria-modal="true" aria-labelledby="resetTitle">
+    <div class="modal">
+      <h3 id="resetTitle">重置所有数据？</h3>
+      <p>这会清空已选赔率、投注记录、开奖历史和气象球状态。重置后可以重新开始演示。</p>
+      <div class="modal-actions"><button class="cancel" id="resetCancel">取消</button><button class="ok" id="resetOk">确认重置</button></div>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>

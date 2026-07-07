@@ -1,0 +1,14 @@
+{
+  "name": "fate-weather-station",
+  "version": "2.0.0",
+  "private": true,
+  "description": "命运气象站：微信可访问的多人实时 H5 数字艺术原型",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "UNLICENSED"
+}
